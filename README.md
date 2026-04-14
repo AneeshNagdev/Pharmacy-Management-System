@@ -1,19 +1,20 @@
-# Pharmacy Management System - Technical Architecture
+# Pharmacy Management System
 
-This application manages pharmacy inventory via a 2-tier architecture (HTML/JS Frontend -> PHP Middleware -> Oracle 11g Database). The primary focus of this documentation is the database schema mapping and Oracle implementation.
+A minimalist, highly functional web application built to serve as a foundational system for managing pharmacy inventory. It operates on a straightforward 2-tier architecture (HTML/JS Frontend -> PHP Middleware -> MySQL Database).
 
-## Database Schemas & Implementation
+## Database Schema & Implementation
 
-Oracle 11g does not natively support `AUTO_INCREMENT` flags on table definitions. Instead, it relies on a discrete Sequence and a Before-Insert Trigger system to populate Primary Keys. 
+The application relies on a strictly structured schema optimized natively for a standard **MySQL** relational database environment, making use of raw PHP data bridging.
 
 ### 1. `medicines` Table Schema
-The core persistent data store for the inventory.
+The core persistent data store for the inventory. The `id` column is configured securely with `AUTO_INCREMENT` to resolve identity constraints internally, avoiding the need for discrete sequences.
+
 ```sql
 CREATE TABLE medicines (
-    id NUMBER PRIMARY KEY,
-    name VARCHAR2(100),
-    price NUMBER(10,2),
-    quantity NUMBER
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    price DECIMAL(10,2),
+    quantity INT
 );
 ```
 
@@ -21,10 +22,10 @@ CREATE TABLE medicines (
 
 | Column Name | Data Type       | Constraints      | Description                          |
 |-------------|-----------------|------------------|--------------------------------------|
-| `id`        | `NUMBER`        | `PRIMARY KEY`    | Unique identifier (Auto-Incremented via Trigger) |
-| `name`      | `VARCHAR2(100)` |                  | Name of the medicine/drug            |
-| `price`     | `NUMBER(10,2)`  |                  | Cost per unit (allowing decimals)    |
-| `quantity`  | `NUMBER`        |                  | Current stock availability           |
+| `id`        | `INT`           | `PRIMARY KEY`    | Unique identifier (Auto-Incremented) |
+| `name`      | `VARCHAR(100)`  |                  | Name of the medicine/drug            |
+| `price`     | `DECIMAL(10,2)` |                  | Cost per unit                        |
+| `quantity`  | `INT`           |                  | Current stock availability           |
 
 #### Example Output Record View
 
@@ -35,35 +36,16 @@ CREATE TABLE medicines (
 | 3  | Amoxicillin  | 12.00  | 5        |
 
 
-### 2. Oracle Sequence Iteration
-An independent numerical generator used to govern the contiguous IDs incrementing precisely from `1`.
-```sql
-CREATE SEQUENCE med_seq START WITH 1 INCREMENT BY 1;
-```
+## Component Configuration
 
-### 3. Oracle Trigger Implementation
-A `BEFORE INSERT` trigger actively intercepts new entries attempting to write to `medicines`, querying the `med_seq` and injecting the next numerical value directly into the row's `id` index.
-```sql
-CREATE OR REPLACE TRIGGER med_trig 
-BEFORE INSERT ON medicines 
-FOR EACH ROW 
-BEGIN 
-  SELECT med_seq.NEXTVAL INTO :new.id FROM dual; 
-END;
-```
-
-*Note: Because of this trigger composition, raw insertion queries can freely omit the `id` column entirely.*
-
-
-## Component Security
-
-- **Prepared Statements Mitigation (`oci_bind_by_name`)**: The `api.php` controller strictly isolates database commands from user inputs using Oracle bind variables (e.g., `:qty`, `:id`). This permanently eliminates SQL Injection vulnerabilities because the driver processes parameters strictly as compiled data types, stripping malicious syntactical executions.
-- **Encapsulated Endpoints**: The frontend pushes static payload dictionaries rather than raw functional SQL queries across the network boundaries.
+- **Encapsulated Execution**: The `api.php` file accepts discrete CRUD execution strings over native `application/x-www-form-urlencoded` POST bridges and formats output directly into normalized, stylized structural HTML block outputs.
+- **Frontend State**: The `index.html` UI interfaces dynamically with the backend by parsing generated component structures seamlessly into the viewport box to ensure lightweight, instantaneous data manipulation without page reloads.
 
 ## Target Environment Setup
-1. Define your TMU Oracle login configuration within `api.php`:
+
+1. **Database Configuration**: Define your backend authentication credentials dynamically within `api.php`:
    ```php
-   $conn = @oci_connect('YOUR_USER', 'YOUR_PASS', '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(Host=oracle.scs.ryerson.ca)(Port=1521))(CONNECT_DATA=(SID=orcl)))');
+   $connect = mysqli_connect("localhost", "YOUR_USERNAME", "YOUR_PASSWORD", "YOUR_DB_NAME");
    ```
-2. Both `api.php` and `index.html` must be placed in a parallel directory context within your `public_html` hierarchy to prevent fetching CORS deviations.
-3. Access the file publicly and click "Create Tables" to initialize the backend schemas.
+2. **Directory Proximity**: Both `api.php` and `index.html` must be placed parallel to each other inside your root web directory frame (`public_html`) to secure synchronous routing endpoints.
+3. **Database Initialization**: Launch the application locally and simply click `"Create Tables"` to generate schemas, executing `"Populate Dummy Data"` to boot the initial framework dependencies.
